@@ -6,3 +6,8 @@ margins:
 
 formatting:
   max_newlines: 2
+
+images:
+  output_dir: 'images'
+  formats: ['jpg', 'png']
+  min_size: 300

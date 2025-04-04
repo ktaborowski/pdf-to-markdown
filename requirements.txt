@@ -1,2 +1,4 @@
 pdfminer.six>=20221105
-PyYAML>=6.0.1 
+Pillow>=10.0.0
+PyYAML>=6.0.1
+PyMuPDF>=1.23.0 
