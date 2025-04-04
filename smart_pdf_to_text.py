@@ -97,6 +97,76 @@ def should_skip_text(text: str, text_element, page_height, config):
     
     return False
 
+def split_into_chunks(text: str, config: dict) -> list:
+    """Split text into chunks based on configuration"""
+    chunk_size = config['chunking']['max_chars']
+    overlap = config['chunking']['overlap_chars']
+    
+    # Split text into paragraphs first
+    paragraphs = text.split('\n\n')
+    chunks = []
+    current_chunk = []
+    current_size = 0
+    
+    for para in paragraphs:
+        para_size = len(para)
+        
+        # If paragraph itself exceeds chunk size, split it
+        if para_size > chunk_size:
+            # Add current chunk if not empty
+            if current_chunk:
+                chunks.append('\n\n'.join(current_chunk))
+                current_chunk = []
+                current_size = 0
+            
+            # Split long paragraph while trying to maintain sentence boundaries
+            sentences = re.split(r'(?<=[.!?])\s+', para)
+            current_sentence = []
+            current_sentence_size = 0
+            
+            for sentence in sentences:
+                sentence_size = len(sentence)
+                if current_sentence_size + sentence_size > chunk_size:
+                    if current_sentence:
+                        chunks.append(' '.join(current_sentence))
+                    current_sentence = [sentence]
+                    current_sentence_size = sentence_size
+                else:
+                    current_sentence.append(sentence)
+                    current_sentence_size += sentence_size
+            
+            if current_sentence:
+                chunks.append(' '.join(current_sentence))
+            
+        # If adding paragraph exceeds chunk size, start new chunk
+        elif current_size + para_size > chunk_size:
+            if current_chunk:
+                chunks.append('\n\n'.join(current_chunk))
+            current_chunk = [para]
+            current_size = para_size
+        else:
+            current_chunk.append(para)
+            current_size += para_size
+    
+    # Add final chunk
+    if current_chunk:
+        chunks.append('\n\n'.join(current_chunk))
+    
+    # Add overlap if configured
+    if overlap > 0:
+        overlapped_chunks = []
+        for i, chunk in enumerate(chunks):
+            if i > 0:
+                # Add overlap from previous chunk
+                prev_chunk = chunks[i-1]
+                overlap_text = prev_chunk[-overlap:]
+                if overlap_text:
+                    chunk = overlap_text + "\n\n... [previous chunk overlap] ...\n\n" + chunk
+            overlapped_chunks.append(chunk)
+        return overlapped_chunks
+    
+    return chunks
+
 def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
     try:
         output_text = []
@@ -132,16 +202,33 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
                 if page_text:
                     output_text.append('\n'.join(page_text))
         
-        # Format and write the final text
-        logger.info("Writing output markdown file...")
+        # Format the text
         formatted_text = '\n\n'.join(output_text)
         formatted_text = formatted_text.replace('\f', '\n\n')  # Form feeds to double newlines
         max_newlines = '\n' * config['formatting']['max_newlines']
         formatted_text = re.sub(r'\n{3,}', max_newlines, formatted_text)
         formatted_text = '\n'.join(line.rstrip() for line in formatted_text.splitlines())
         
-        with open(output_path, 'w', encoding='utf-8') as out_file:
-            out_file.write(formatted_text)
+        # Split into chunks
+        chunks = split_into_chunks(formatted_text, config)
+        
+        # Write chunks to separate files
+        output_path = Path(output_path)
+        base_path = output_path.parent / output_path.stem
+        base_path.mkdir(exist_ok=True)
+        
+        logger.info(f"\nWriting {len(chunks)} chunks...")
+        for i, chunk in enumerate(chunks, 1):
+            chunk_path = base_path / f"chunk_{i:03d}.md"
+            with open(chunk_path, 'w', encoding='utf-8') as f:
+                f.write(chunk)
+            logger.info(f"Written chunk {i}/{len(chunks)}: {chunk_path}")
+        
+        # Write full file if requested
+        if config['chunking']['keep_full_file']:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(formatted_text)
+            logger.info(f"Written full file: {output_path}")
         
         logger.info("Conversion completed successfully!")
         return True

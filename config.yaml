@@ -10,4 +10,9 @@ formatting:
 images:
   output_dir: 'images'
   formats: ['jpg', 'png']
-  min_size: 300
+  min_size: 100  # minimum width/height in pixels to save
+
+chunking:
+  max_chars: 8000  # ~2000 words, optimal for most LLMs
+  overlap_chars: 500  # overlap between chunks to maintain context
+  keep_full_file: true  # whether to keep the full markdown file in addition to chunks
