@@ -15,7 +15,11 @@ import pdfminer.converter as converter
 from PIL import Image
 import fitz  # PyMuPDF
 
-# Suppress all warning messages
+# Configure logging
+logging.basicConfig(format='%(message)s', level=logging.INFO)
+logger = logging.getLogger('pdf_converter')
+
+# Suppress library warnings
 logging.getLogger('fitz').setLevel(logging.ERROR)
 logging.getLogger('PIL').setLevel(logging.ERROR)
 logging.getLogger('pdfminer').setLevel(logging.ERROR)
@@ -40,10 +44,15 @@ def extract_images(pdf_path: str, image_dir: Path, config: dict) -> dict:
     """Extract images from PDF using PyMuPDF and return a mapping of image locations"""
     image_locations = {}
     doc = fitz.open(pdf_path)
+    total_pages = len(doc)
     
-    for page_num in range(len(doc)):
+    logger.info(f"Extracting images from {total_pages} pages...")
+    for page_num in range(total_pages):
         page = doc[page_num]
         image_list = page.get_images()
+        
+        if image_list:
+            logger.info(f"Found {len(image_list)} images on page {page_num + 1}")
         
         for img_idx, img in enumerate(image_list):
             xref = img[0]
@@ -71,7 +80,7 @@ def extract_images(pdf_path: str, image_dir: Path, config: dict) -> dict:
                 image_locations[key].append(str(Path(config['images']['output_dir']) / filename))
                 
             except Exception as e:
-                print(f"Failed to save image: {e}", file=sys.stderr)
+                logger.error(f"Failed to save image from page {page_num + 1}: {e}")
     
     return image_locations
 
@@ -97,10 +106,13 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
         image_locations = extract_images(pdf_path, image_dir, config)
         
         # Process text and insert images
+        logger.info("\nExtracting and formatting text...")
         with open(pdf_path, 'rb') as pdf_file:
-            current_page = -1
-            for page_layout in high_level.extract_pages(pdf_file, laparams=layout.LAParams()):
-                current_page += 1
+            pages = list(high_level.extract_pages(pdf_file, laparams=layout.LAParams()))
+            total_pages = len(pages)
+            logger.info(f"Processing {total_pages} pages...")
+            
+            for current_page, page_layout in enumerate(pages):
                 page_height = page_layout.height
                 page_text = []
                 
@@ -121,6 +133,7 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
                     output_text.append('\n'.join(page_text))
         
         # Format and write the final text
+        logger.info("Writing output markdown file...")
         formatted_text = '\n\n'.join(output_text)
         formatted_text = formatted_text.replace('\f', '\n\n')  # Form feeds to double newlines
         max_newlines = '\n' * config['formatting']['max_newlines']
@@ -129,9 +142,11 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
         
         with open(output_path, 'w', encoding='utf-8') as out_file:
             out_file.write(formatted_text)
+        
+        logger.info("Conversion completed successfully!")
         return True
     except Exception as e:
-        print(f"Error: {str(e)}", file=sys.stderr)
+        logger.error(f"Error: {str(e)}")
         return False
 
 def main():
