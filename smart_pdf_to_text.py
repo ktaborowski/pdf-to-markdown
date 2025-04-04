@@ -239,11 +239,11 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict, toc_structure
             with open(pdf_path, 'rb') as pdf_file:
                 pages = list(high_level.extract_pages(pdf_file))
                 
-                for section in sections:
+                for i, section in enumerate(sections, 1):
                     section_id = section['id']
                     section_title = section['title']
                     # Create directory using section title
-                    section_dir = base_path / f"section_{section_title.lower().replace(' ', '_').replace('-', '_')}"
+                    section_dir = base_path / f"section_{section_id.lower().replace('.', '_')}"
                     section_dir.mkdir(exist_ok=True)
                     
                     # Extract text for this section
@@ -262,8 +262,8 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict, toc_structure
                     text = re.sub(r'\n{3,}', max_newlines, text)
                     text = '\n'.join(line.rstrip() for line in text.splitlines())
                     
-                    # Add section header with title from TOC
-                    text = f"Section: {section_title}\n\n{text}"
+                    # Add section header with markdown formatting, section number and title
+                    text = f"# {i}. {section_title}\n\n{text}"
                     
                     # Add to full text
                     formatted_text.append(text)
@@ -272,8 +272,8 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict, toc_structure
                     chunks = split_into_chunks(text, config)
                     
                     # Write chunks
-                    for i, chunk in enumerate(chunks, 1):
-                        chunk_path = section_dir / f"chunk_{i:03d}.md"
+                    for j, chunk in enumerate(chunks, 1):
+                        chunk_path = section_dir / f"chunk_{j:03d}.md"
                         with open(chunk_path, 'w', encoding='utf-8') as f:
                             f.write(chunk)
                         logger.info(f"Written: {chunk_path}")
@@ -393,20 +393,39 @@ def main():
     parser = argparse.ArgumentParser(description='Convert PDF to markdown')
     parser.add_argument('pdf_path', help='Path to input PDF file')
     parser.add_argument('output_path', help='Path for output markdown file')
-    parser.add_argument('--extract-toc', action='store_true', help='Extract built-in TOC/bookmarks')
+    parser.add_argument('--extract-toc', action='store_true', help='Extract built-in TOC/bookmarks explicitly (usually not needed as TOC is auto-detected)')
     
     args = parser.parse_args()
     
+    # Check if file exists
+    pdf_path = Path(args.pdf_path)
+    if not pdf_path.is_file():
+        logger.error(f"Error: File not found: {pdf_path}")
+        sys.exit(1)
+        
     # Load configuration
     config = load_config()
     
-    # Extract TOC if requested
-    toc_structure = None
-    if args.extract_toc:
-        toc_structure = extract_pdf_toc(args.pdf_path)
-    
-    success = pdf_to_markdown(args.pdf_path, args.output_path, config, toc_structure)
-    sys.exit(0 if success else 1)
+    try:
+        # Always try to extract TOC first
+        logger.info("Checking for built-in TOC...")
+        doc = fitz.open(args.pdf_path)
+        toc = doc.get_toc()
+        
+        if toc and len(toc) > 0:
+            logger.info(f"Found built-in TOC, using it for chunking...")
+            toc_structure = extract_pdf_toc(args.pdf_path)
+        else:
+            logger.info("No built-in TOC found. Using regular chunking...")
+            toc_structure = None
+        
+        # Process PDF
+        success = pdf_to_markdown(args.pdf_path, args.output_path, config, toc_structure)
+        sys.exit(0 if success else 1)
+        
+    except Exception as e:
+        logger.error(f"Error processing PDF: {str(e)}")
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
