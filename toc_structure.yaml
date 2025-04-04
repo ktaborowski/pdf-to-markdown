@@ -1,0 +1,588 @@
+Overview:
+  title: Overview
+  page: 9
+  subsections:
+    Scope:
+      title: Scope
+      page: 9
+      subsections: {}
+Network:
+  title: Network architecture
+  page: 11
+  subsections:
+    Entities:
+      title: Entities and roles
+      page: 15
+      subsections:
+        End:
+          title: End user interface
+          page: 15
+          subsections: {}
+        Cloud:
+          title: Cloud
+          page: 15
+          subsections: {}
+        Gateways:
+          title: Gateways
+          page: 16
+          subsections: {}
+        Endpoints:
+          title: Endpoints
+          page: 16
+          subsections: {}
+    PAN:
+      title: PAN
+      page: 17
+      subsections: {}
+    WAN:
+      title: WAN
+      page: 18
+      subsections: {}
+Application:
+  title: Application
+  page: 19
+  subsections:
+    Application:
+      title: Application commands
+      page: 23
+      subsections:
+        Custom:
+          title: Custom commands
+          page: 24
+          subsections: {}
+        Management:
+          title: Management commands
+          page: 25
+          subsections:
+            Time:
+              title: Time management commands
+              page: 25
+              subsections: {}
+            Join:
+              title: Join commands
+              page: 27
+              subsections:
+                Command:
+                  title: Command Payload
+                  page: 28
+                  subsections: {}
+            Device:
+              title: Device profile commands
+              page: 31
+              subsections: {}
+            Reset:
+              title: Reset commands
+              page: 32
+              subsections: {}
+        Capability:
+          title: Capability and Configuration commands
+          page: 33
+          subsections:
+            Capability:
+              title: Capability Parameters
+              page: 34
+              subsections: {}
+            Configuration:
+              title: Configuration Parameters
+              page: 34
+              subsections: {}
+        Metrics:
+          title: Metrics commands
+          page: 35
+          subsections: {}
+Security:
+  title: Security
+  page: 41
+  subsections:
+    Architecture:
+      title: Architecture
+      page: 41
+      subsections:
+        Security:
+          title: Security model
+          page: 43
+          subsections: {}
+        Certificate:
+          title: Certificate chain
+          page: 43
+          subsections: {}
+        Certificates:
+          title: Certificates and device serial numbers
+          page: 44
+          subsections: {}
+        Key:
+          title: Key types
+          page: 45
+          subsections: {}
+        The:
+          title: The procedure of generating device private keys during MFG process
+          page: 46
+          subsections: {}
+    Global:
+      title: Global clock synchronization
+      page: 47
+      subsections: {}
+    Entity:
+      title: Entity identification
+      page: 49
+      subsections:
+        Device:
+          title: Device ID
+          page: 49
+          subsections: {}
+        Sidewalk:
+          title: Sidewalk Manufacturing Serial Number (SMSN)
+          page: 50
+          subsections: {}
+        Amazon:
+          title: Amazon Sidewalk ID
+          page: 50
+          subsections: {}
+        Service:
+          title: Service ID
+          page: 51
+          subsections: {}
+    Key:
+      title: Key management
+      page: 59
+      subsections:
+        Session:
+          title: Session Key exchange
+          page: 59
+          subsections: {}
+        Gateway:
+          title: Gateway Primary Key Negotiation
+          page: 59
+          subsections: {}
+    Obfuscated:
+      title: Obfuscated TX(Transmission) ID
+      page: 60
+      subsections:
+        Device:
+          title: Device ID obfuscation
+          page: 60
+          subsections: {}
+    Encrypted:
+      title: Encrypted messaging
+      page: 61
+      subsections:
+        Symmetric:
+          title: Symmetric keys used in encrypted messaging
+          page: 64
+          subsections: {}
+        Initialization:
+          title: Initialization Vector
+          page: 64
+          subsections:
+            Network:
+              title: Network encryption layer IV
+              page: 65
+              subsections: {}
+            Application:
+              title: Application Layer security IV
+              page: 66
+              subsections: {}
+        AEAD:
+          title: AEAD - Authenticated Encryption with Associated Data
+          page: 66
+          subsections: {}
+    Flex:
+      title: Flex Layer messaging
+      page: 68
+      subsections:
+        Flex:
+          title: Flex Layers message flow
+          page: 68
+          subsections: {}
+Sub-GHz:
+  title: Sub-GHz Protocol Stack
+  page: 71
+  subsections:
+    Protocol:
+      title: Protocol Stack Layers and Structure
+      page: 71
+      subsections:
+        Presentation:
+          title: Presentation Layer
+          page: 72
+          subsections:
+            Presentation:
+              title: Presentation Layer Frame format
+              page: 72
+              subsections:
+                Application:
+                  title: Application command
+                  page: 78
+                  subsections: {}
+                Network:
+                  title: 'Network diagnostic data (nw_data_blob) '
+                  page: 75
+                  subsections: {}
+        Network:
+          title: Network Layer
+          page: 83
+          subsections:
+            Network:
+              title: Network Layer Frame format
+              page: 83
+              subsections:
+                Network:
+                  title: Network Layer configuration
+                  page: 89
+                  subsections: {}
+                Authentication:
+                  title: Authentication fields
+                  page: 86
+                  subsections: {}
+        Link:
+          title: Link Layer
+          page: 90
+          subsections:
+            Beacon:
+              title: Beacon Frame format
+              page: 91
+              subsections:
+                Link:
+                  title: Link Layer Frame Control Fields
+                  page: 92
+                  subsections: {}
+                Beacon:
+                  title: Beacon Security field (pan_auth_tag)
+                  page: 100
+                  subsections: {}
+            Message:
+              title: Message frame format
+              page: 101
+              subsections:
+                Message:
+                  title: Message Link Layer Frame payload field (frame_pld)
+                  page: 105
+                  subsections: {}
+        Physical:
+          title: Physical layer
+          page: 106
+          subsections:
+            Data:
+              title: Data order
+              page: 106
+              subsections: {}
+            RF:
+              title: RF frame formats
+              page: 106
+              subsections:
+                Sub-G:
+                  title: Sub-G FSK frame format details
+                  page: 107
+                  subsections: {}
+                SubG-FSK:
+                  title: SubG-FSK Airtime summary
+                  page: 108
+                  subsections: {}
+                SubG-CSS:
+                  title: SubG-CSS Airtime summary
+                  page: 108
+                  subsections: {}
+            Time:
+              title: Time drift
+              page: 108
+              subsections: {}
+    SubG-FSK:
+      title: SubG-FSK Connection
+      page: 109
+      subsections:
+        Beacon:
+          title: Beacon discovery
+          page: 110
+          subsections: {}
+        Synchronization:
+          title: Synchronization maintenance
+          page: 111
+          subsections: {}
+        Uplink:
+          title: Uplink and downlink
+          page: 112
+          subsections: {}
+        Channel:
+          title: Channel hopping
+          page: 113
+          subsections:
+            Pseudorandom:
+              title: Pseudorandom number generator
+              page: 114
+              subsections: {}
+            Channel:
+              title: Channel shuffler
+              page: 114
+              subsections: {}
+            Beacon:
+              title: Beacon hopping sequence calculation
+              page: 115
+              subsections: {}
+            Uplink:
+              title: Uplink or downlink hopping sequence calculation
+              page: 115
+              subsections: {}
+        Contention:
+          title: Contention mechanism
+          page: 117
+          subsections: {}
+    SubG-CSS:
+      title: SubG-CSS connection
+      page: 118
+      subsections:
+        Downlink:
+          title: Downlink and uplink
+          page: 118
+          subsections:
+            Uplink:
+              title: Uplink offset computation algorithm
+              page: 120
+              subsections: {}
+    Gateway:
+      title: Gateway connection modes
+      page: 121
+      subsections:
+        SubG-FSK-only:
+          title: SubG-FSK-only operation mode
+          page: 124
+          subsections: {}
+        SubG-CSS-only:
+          title: SubG-CSS-only operation mode
+          page: 124
+          subsections: {}
+        Multirate:
+          title: Multirate operation mode
+          page: 125
+          subsections: {}
+    Amazon:
+      title: Amazon Sidewalk Endpoint connection modes
+      page: 126
+      subsections:
+        SubG-FSK:
+          title: SubG-FSK connection profiles
+          page: 126
+          subsections:
+            Connection:
+              title: Connection Profile 2
+              page: 130
+              subsections:
+                Link:
+                  title: Link Connection Establishment Phase
+                  page: 131
+                  subsections: {}
+                Amazon:
+                  title: Amazon Sidewalk Connection and Link Connection Update
+                  page: 131
+                  subsections:
+                    Schedule:
+                      title: Schedule Assignment and Maintenance at Gateways
+                      page: 133
+                      subsections: {}
+            Link:
+              title: Link Connection Maintenance Phase
+              page: 133
+              subsections:
+                Link:
+                  title: Link Connection Loss Detection
+                  page: 133
+                  subsections: {}
+                Amazon:
+                  title: Amazon Sidewalk Connection Loss Detection
+                  page: 133
+                  subsections: {}
+        Asynchronous:
+          title: Asynchronous access mode profiles
+          page: 134
+          subsections:
+            Profile:
+              title: Profile B Configuration
+              page: 135
+              subsections: {}
+    Connection:
+      title: Connection maintenance with network synchronization
+      page: 136
+      subsections:
+        Connection:
+          title: Connection Profile D - Offline operation mode
+          page: 140
+          subsections: {}
+    Sub-GHz:
+      title: Sub-GHz physical layer modulations
+      page: 140
+      subsections:
+        Frequency:
+          title: Frequency hopping
+          page: 141
+          subsections: {}
+        LoRa:
+          title: LoRa modulation for SubG-CSS
+          page: 142
+          subsections: {}
+        GFSK:
+          title: GFSK modulation for SubG-FSK
+          page: 142
+          subsections: {}
+BLE:
+  title: BLE Protocol Stack
+  page: 143
+  subsections:
+    Amazon:
+      title: Amazon Sidewalk BLE features
+      page: 157
+      subsections:
+        Endpoint-initiated:
+          title: Endpoint-initiated Encrypted Connection
+          page: 157
+          subsections: {}
+        Device-to-Device:
+          title: Device-to-Device Communication (D2D)
+          page: 158
+          subsections:
+            D2D:
+              title: D2D communication scenarios
+              page: 158
+              subsections: {}
+        Touchless:
+          title: Touchless Registration (Frustration-Free Network)
+          page: 160
+          subsections: {}
+        Time:
+          title: Time Sync trigger over Amazon Sidewalk BLE Beacon
+          page: 165
+          subsections: {}
+        Network:
+          title: Network Key Refresh
+          page: 166
+          subsections:
+            Introduction:
+              title: Introduction
+              page: 166
+              subsections: {}
+            Key:
+              title: Key Refresh Flow
+              page: 166
+              subsections: {}
+            Sequence:
+              title: Sequence Diagram
+              page: 167
+              subsections: {}
+            States:
+              title: States for Key Refresh
+              page: 168
+              subsections: {}
+        Deregistration:
+          title: Deregistration
+          page: 168
+          subsections: {}
+Sidewalk:
+  title: Sidewalk Bulk Data Transfer
+  page: 173
+  subsections:
+    Overview:
+      title: Overview
+      page: 173
+      subsections:
+        Purpose:
+          title: Purpose and Benefits
+          page: 173
+          subsections: {}
+    Design:
+      title: Design Architecture
+      page: 173
+      subsections:
+        Sidewalk:
+          title: Sidewalk Data Transfer Supported Flows
+          page: 173
+          subsections: {}
+        Messaging:
+          title: Messaging
+          page: 174
+          subsections: {}
+        File:
+          title: File Transfer Delivery Mechanisms
+          page: 174
+          subsections:
+            Cloud:
+              title: Cloud Driven Delivery
+              page: 175
+              subsections: {}
+    End:
+      title: End Device
+      page: 175
+      subsections: {}
+    Security:
+      title: Security and Privacy
+      page: 175
+      subsections: {}
+    Protocol:
+      title: Protocol Specification
+      page: 177
+      subsections:
+        SBDT:
+          title: SBDT Commands
+          page: 179
+          subsections:
+            Application:
+              title: Application Layer Commands
+              page: 179
+              subsections: {}
+            Network:
+              title: Network Layer Commands
+              page: 184
+              subsections: {}
+        Status:
+          title: Status
+          page: 188
+          subsections: {}
+Procedures:
+  title: Procedures and flow charts
+  page: 189
+  subsections:
+    Power:
+      title: Power up
+      page: 189
+      subsections: {}
+    Global:
+      title: Global Clock Synchronization
+      page: 190
+      subsections:
+        Global:
+          title: Global clock synchronization - retry
+          page: 192
+          subsections: {}
+    Join:
+      title: Join and Network Sync Procedures
+      page: 193
+      subsections:
+        Join:
+          title: Join Request and retries
+          page: 194
+          subsections: {}
+        Connection:
+          title: Connection Profile parameters change
+          page: 195
+          subsections: {}
+Glossary:
+  title: Glossary
+  page: 197
+  subsections: {}
+Command:
+  title: Command List
+  page: 199
+  subsections:
+    SubG-FSK:
+      title: SubG-FSK Mode Connection Profile 2 Command List
+      page: 199
+      subsections: {}
+Regional:
+  title: Regional parameters
+  page: 201
+  subsections:
+    Parameters:
+      title: Parameters for use in security
+      page: 203
+      subsections: {}
+Change:
+  title: Change History
+  page: 205
+  subsections: {}
