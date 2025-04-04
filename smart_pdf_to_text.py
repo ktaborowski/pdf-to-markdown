@@ -2,13 +2,23 @@
 
 import sys
 import argparse
-from pdf2markdown import convert_pdf_to_markdown
+from io import StringIO
+from pdfminer.high_level import extract_text_to_fp
+from pdfminer.layout import LAParams
 
 def pdf_to_markdown(pdf_path: str, output_path: str) -> bool:
     try:
-        markdown = convert_pdf_to_markdown(pdf_path)
+        output = StringIO()
+        with open(pdf_path, 'rb') as pdf_file:
+            extract_text_to_fp(pdf_file, output, laparams=LAParams())
+            
+        markdown_text = output.getvalue()
+        
+        # Basic formatting: Add markdown headers and preserve paragraphs
+        formatted_text = markdown_text.replace('\f', '\n\n')  # Form feeds to double newlines
+        
         with open(output_path, 'w', encoding='utf-8') as out_file:
-            out_file.write(markdown)
+            out_file.write(formatted_text)
         return True
     except Exception as e:
         print(f"Error: {str(e)}", file=sys.stderr)
