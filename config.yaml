@@ -1,0 +1,8 @@
+# PDF to Markdown Conversion Configuration
+
+margins:
+  header_margin: 100
+  footer_margin: 100
+
+formatting:
+  max_newlines: 2
