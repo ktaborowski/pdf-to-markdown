@@ -4,6 +4,7 @@ import sys
 import argparse
 import re
 import yaml
+import logging
 from pathlib import Path
 from io import StringIO, BytesIO
 import pdfminer.layout as layout
@@ -13,6 +14,11 @@ import pdfminer.pdfpage as pdfpage
 import pdfminer.converter as converter
 from PIL import Image
 import fitz  # PyMuPDF
+
+# Suppress all warning messages
+logging.getLogger('fitz').setLevel(logging.ERROR)
+logging.getLogger('PIL').setLevel(logging.ERROR)
+logging.getLogger('pdfminer').setLevel(logging.ERROR)
 
 def load_config():
     """Load configuration from YAML file"""
