@@ -16,3 +16,4 @@ chunking:
   max_chars: 8000  # ~2000 words, optimal for most LLMs
   overlap_chars: 500  # overlap between chunks to maintain context
   keep_full_file: true  # whether to keep the full markdown file in addition to chunks
+  toc_level: 2  # maximum section level to track (1-6)

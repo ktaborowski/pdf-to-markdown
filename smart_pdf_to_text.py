@@ -357,15 +357,24 @@ def extract_pdf_toc(pdf_path: str) -> dict:
     doc = fitz.open(pdf_path)
     toc = doc.get_toc()
     
+    # Load configuration
+    config = load_config()
+    max_level = config['chunking'].get('toc_level', 6)
+    
     # Convert to dictionary structure
     toc_structure = {}
-    current_sections = [None] * 6  # Track up to 6 levels
+    current_sections = [None] * max_level  # Track up to max_level levels
     
     for level, title, page in toc:
+        # Skip if level is beyond max_level
+        if level > max_level:
+            continue
+            
         # Create section entry
         section_entry = {
             'title': title,
             'page': page,
+            'level': level,  # Store level information
             'subsections': {},
         }
         
