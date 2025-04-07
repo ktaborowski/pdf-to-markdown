@@ -217,7 +217,7 @@ def extract_section_text(pages: list, start_page: int, end_page: int, config: di
     
     return '\n\n'.join(section_text)
 
-def pdf_to_markdown(pdf_path: str, output_path: str, config: dict, toc_structure: dict = None) -> bool:
+def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
     try:
         # Setup image directory and extract images
         image_dir = setup_image_dir(output_path, config)
@@ -231,6 +231,13 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict, toc_structure
         # Variable to store full text if needed
         formatted_text = []
         
+        toc_structure = extract_pdf_toc(pdf_path)
+        # Save TOC structure
+        with open(base_path / 'structure.yaml', 'w') as f:
+            yaml.dump(toc_structure, f, sort_keys=False)
+        
+        logger.info(f"Found {len(toc_structure)} top-level sections")
+        logger.info("TOC structure saved to toc_structure.yaml")
         # Extract text using sections if TOC is available
         if toc_structure:
             sections = get_section_pages(toc_structure)
@@ -240,10 +247,10 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict, toc_structure
                 pages = list(high_level.extract_pages(pdf_file))
                 
                 for i, section in enumerate(sections, 1):
-                    section_id = section['id']
+                    section_id = f"{i:03d}"  # Format with leading zeros, e.g. 001, 002, etc.
                     section_title = section['title']
                     # Create directory using section title
-                    section_dir = base_path / f"section_{section_id.lower().replace('.', '_')}"
+                    section_dir = base_path / f"{section_id}_{section_title.lower()}"
                     section_dir.mkdir(exist_ok=True)
                     
                     # Extract text for this section
@@ -379,21 +386,13 @@ def extract_pdf_toc(pdf_path: str) -> dict:
             if parent:
                 key = title.split()[0] if title else str(len(parent['subsections']) + 1)
                 parent['subsections'][key] = section_entry
-    
-    # Save TOC structure
-    with open('toc_structure.yaml', 'w') as f:
-        yaml.dump(toc_structure, f, sort_keys=False)
-    
-    logger.info(f"Found {len(toc_structure)} top-level sections")
-    logger.info("TOC structure saved to toc_structure.yaml")
-    
+
     return toc_structure
 
 def main():
     parser = argparse.ArgumentParser(description='Convert PDF to markdown')
     parser.add_argument('pdf_path', help='Path to input PDF file')
     parser.add_argument('output_path', help='Path for output markdown file')
-    parser.add_argument('--extract-toc', action='store_true', help='Extract built-in TOC/bookmarks explicitly (usually not needed as TOC is auto-detected)')
     
     args = parser.parse_args()
     
@@ -407,22 +406,9 @@ def main():
     config = load_config()
     
     try:
-        # Always try to extract TOC first
-        logger.info("Checking for built-in TOC...")
-        doc = fitz.open(args.pdf_path)
-        toc = doc.get_toc()
-        
-        if toc and len(toc) > 0:
-            logger.info(f"Found built-in TOC, using it for chunking...")
-            toc_structure = extract_pdf_toc(args.pdf_path)
-        else:
-            logger.info("No built-in TOC found. Using regular chunking...")
-            toc_structure = None
-        
         # Process PDF
-        success = pdf_to_markdown(args.pdf_path, args.output_path, config, toc_structure)
-        sys.exit(0 if success else 1)
-        
+        success = pdf_to_markdown(args.pdf_path, args.output_path, config)
+        sys.exit(0 if success else 1)   
     except Exception as e:
         logger.error(f"Error processing PDF: {str(e)}")
         sys.exit(1)

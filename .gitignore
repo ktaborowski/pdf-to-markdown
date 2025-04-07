@@ -3,4 +3,5 @@ out*/
 images*/
 *.pdf
 *.md
+structure.yaml
 .venv/
