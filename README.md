@@ -36,6 +36,8 @@ pip install -r requirements.txt
 
 ## Usage
 
+> **Note:** To enable Cursor indexing of output markdown files, add `!*.md` to your `.cursorignore` file to prevent it from being ignored based on `.gitignore`.
+
 ### Basic Usage
 
 Convert a PDF to Markdown with default settings:
