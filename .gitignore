@@ -1,7 +1,14 @@
-export*/
-out*/
 images*/
 *.pdf
 *.md
+!README.md
+!docs/*.md
 structure.yaml
 .venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+dist/
+build/
+*.egg-info/
