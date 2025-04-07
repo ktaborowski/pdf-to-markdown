@@ -36,7 +36,12 @@ def load_config():
 
 def setup_image_dir(base_path: str, config: dict) -> Path:
     """Create and return path to image directory"""
-    output_dir = Path(base_path).parent / config['images']['output_dir']
+    # Create the base output directory if it doesn't exist
+    output_base = Path(base_path).parent / Path(base_path).stem
+    output_base.mkdir(exist_ok=True)
+    
+    # Create images directory inside the output directory
+    output_dir = output_base / config['images']['output_dir']
     output_dir.mkdir(exist_ok=True)
     return output_dir
 
@@ -77,7 +82,7 @@ def extract_images(pdf_path: str, image_dir: Path, config: dict) -> dict:
                 key = f"page_{page_num}"
                 if key not in image_locations:
                     image_locations[key] = []
-                image_locations[key].append(str(Path(config['images']['output_dir']) / filename))
+                image_locations[key].append(filename)
                 
             except Exception as e:
                 logger.error(f"Failed to save image from page {page_num + 1}: {e}")
@@ -240,7 +245,9 @@ def process_section_recursive(section, section_id, base_path, pages, image_locat
         key = f"page_{page_num}"
         if key in image_locations:
             for img_path in image_locations[key]:
-                text = f"\n![Figure]({img_path})\n" + text
+                # Reference images directory at the same level as the section directory
+                img_ref_path = f"../images/{img_path}"
+                text = f"\n![Figure]({img_ref_path})\n" + text
     
     # Format the text
     text = text.replace('\f', '\n\n')
@@ -287,7 +294,7 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
         
         # Extract text using sections if TOC is available
         if toc_structure:
-            # Sort sections primarily by page, secondarily by level to handle same-page sections
+            # Sort sections primarily by page, secondarily by level
             sorted_sections = sorted(toc_structure.items(), key=lambda x: (x[1]['page'], x[1]['level']))
             logger.info(f"\nProcessing {len(sorted_sections)} subsections...")
             
@@ -301,41 +308,39 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
 
                     # --- Determine accurate end_page --- 
                     end_page = None
-                    
-                    # 1. Look for the first direct child subsection's start page
                     first_child_page = None
                     for j in range(i + 1, len(sorted_sections)):
                         next_sec_id, next_sec_data = sorted_sections[j]
                         if next_sec_data['level'] == level + 1 and next_sec_data['full_path'][:-1] == current_full_path:
                             first_child_page = next_sec_data['page']
-                            break # Found the first direct child
-
-                    # 2. Look for the start page of the next section at the same or higher level
+                            break
                     next_sibling_or_cousin_page = None
                     for j in range(i + 1, len(sorted_sections)):
                         next_sec_id, next_sec_data = sorted_sections[j]
                         if next_sec_data['level'] <= level:
                             next_sibling_or_cousin_page = next_sec_data['page']
-                            break # Found next section at same or higher level
-                            
-                    # Prioritize first child, then sibling/cousin
+                            break
                     if first_child_page is not None and (next_sibling_or_cousin_page is None or first_child_page <= next_sibling_or_cousin_page):
                         end_page = first_child_page
                     elif next_sibling_or_cousin_page is not None:
                         end_page = next_sibling_or_cousin_page
                     else:
-                        # 3. If it's the last section overall, use default offset
                         end_page = start_page + 10
-
-                    # Ensure end_page is at least start_page (handles single-page sections)
                     if end_page < start_page:
                         end_page = start_page
                     # --- End of end_page determination ---
                     
-                    # Create sanitized section title and directory
-                    section_title = section['title'].lower().replace('/', '_').replace('\\', '_')
-                    section_dir = base_path / f"{section['id']}_{section_title}"
-                    section_dir.mkdir(exist_ok=True)
+                    # --- Determine Top-Level Directory --- 
+                    top_level_id = section['id'].split('.')[0]
+                    top_level_section_data = toc_structure.get(top_level_id)
+                    if top_level_section_data:
+                        top_level_title = top_level_section_data['title'].lower().replace('/', '_').replace('\\', '_')
+                        section_output_dir = base_path / f"{top_level_id}_{top_level_title}"
+                    else:
+                        # Fallback if top-level section somehow not found (shouldn't happen)
+                        section_output_dir = base_path / f"{top_level_id}_unknown_section"
+                    section_output_dir.mkdir(exist_ok=True)
+                    # --- End of Top-Level Directory --- 
                     
                     # Extract text for this section using refined page range
                     text = extract_section_text(pages, start_page, end_page, config)
@@ -345,7 +350,9 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
                         key = f"page_{page_num}"
                         if key in image_locations:
                             for img_path in image_locations[key]:
-                                text = f"\n![Figure]({img_path})\n" + text
+                                # Reference images directory at the same level as the section directory
+                                img_ref_path = f"../images/{img_path}"
+                                text = f"\n![Figure]({img_ref_path})\n" + text
                     
                     # Format the text
                     text = text.replace('\f', '\n\n')
@@ -354,7 +361,8 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
                     text = '\n'.join(line.rstrip() for line in text.splitlines())
                     
                     # Add section header with markdown formatting and proper heading level
-                    text = f"{'#' * section['level']} {section['id']} {section['title']}\n\n{text}"
+                    section_title_raw = section['title'] # Use raw title for header
+                    text = f"{'#' * section['level']} {section['id']} {section_title_raw}\n\n{text}"
                     
                     # Add to full text
                     formatted_text.append(text)
@@ -362,9 +370,26 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
                     # Split into chunks if too large
                     chunks = split_into_chunks(text, config)
                     
-                    # Write chunks
+                    # Write chunks with new naming convention
+                    section_title_sanitized = section['title'].lower().replace('/', '_').replace('\\', '_')
+                    # Format section ID with zero-padded subsections
+                    parts = section['id'].split('.')
+                    padded_parts = []
+                    for i, part in enumerate(parts):
+                        # First level doesn't need padding
+                        if i == 0:
+                            padded_parts.append(part)
+                        else:
+                            # Pad subsection numbers with zeros (2 digits)
+                            padded_parts.append(f"{int(part):02d}")
+                    section_id_padded = '_'.join(padded_parts)
+                    if len(parts) == 1:
+                        # For top level sections, add _0
+                        section_id_padded = f"{section_id_padded}_0"
+
                     for j, chunk in enumerate(chunks, 1):
-                        chunk_path = section_dir / f"chunk_{j:03d}.md"
+                        chunk_filename = f"{section_id_padded}_{section_title_sanitized}_{j:02d}.md"
+                        chunk_path = section_output_dir / chunk_filename
                         with open(chunk_path, 'w', encoding='utf-8') as f:
                             f.write(chunk)
                         logger.info(f"Written: {chunk_path}")
