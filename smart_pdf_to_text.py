@@ -171,7 +171,7 @@ def get_section_pages(toc_structure: dict) -> list:
     """Get list of sections with their page ranges"""
     sections = []
     
-    # Sort sections by their starting page
+    # Convert dictionary items to list and sort by page number
     sorted_sections = sorted(toc_structure.items(), key=lambda x: x[1]['page'])
     
     for i, (section_id, section) in enumerate(sorted_sections):
@@ -184,12 +184,15 @@ def get_section_pages(toc_structure: dict) -> list:
         else:
             end_page = start_page + 10  # Assume last section is ~10 pages
         
+        # Create sanitized section title
+        title = section['title'].lower().replace('/', '_').replace('\\', '_')
+        
         sections.append({
             'id': section_id,
-            'title': section['title'],
+            'title': title,
             'start_page': start_page,
             'end_page': end_page,
-            'subsections': section.get('subsections', {})
+            'level': section['level']
         })
     
     return sections
@@ -217,6 +220,49 @@ def extract_section_text(pages: list, start_page: int, end_page: int, config: di
     
     return '\n\n'.join(section_text)
 
+def process_section_recursive(section, section_id, base_path, pages, image_locations, config):
+    """Process a section and its subsections recursively"""
+    section_title = section['title']
+    start_page = section['page']
+    
+    # Find end page by looking at next section
+    end_page = start_page + 10  # Default to 10 pages if no better reference found
+    
+    # Create directory using section ID and title
+    section_dir = base_path / f"{section_id}_{section_title.lower().replace('/', '_').replace('\\', '_')}"
+    section_dir.mkdir(exist_ok=True)
+    
+    # Extract text for this section
+    text = extract_section_text(pages, start_page, end_page, config)
+    
+    # Add any images from the section's pages
+    for page_num in range(start_page - 1, end_page):
+        key = f"page_{page_num}"
+        if key in image_locations:
+            for img_path in image_locations[key]:
+                text = f"\n![Figure]({img_path})\n" + text
+    
+    # Format the text
+    text = text.replace('\f', '\n\n')
+    max_newlines = '\n' * config['formatting']['max_newlines']
+    text = re.sub(r'\n{3,}', max_newlines, text)
+    text = '\n'.join(line.rstrip() for line in text.splitlines())
+    
+    # Add section header with markdown formatting
+    text = f"{'#' * section['level']} {section_title}\n\n{text}"
+    
+    # Split into chunks if too large
+    chunks = split_into_chunks(text, config)
+    
+    # Write chunks
+    for i, chunk in enumerate(chunks, 1):
+        chunk_path = section_dir / f"chunk_{i:03d}.md"
+        with open(chunk_path, 'w', encoding='utf-8') as f:
+            f.write(chunk)
+        logger.info(f"Written: {chunk_path}")
+    
+    return text
+
 def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
     try:
         # Setup image directory and extract images
@@ -236,28 +282,66 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
         with open(base_path / 'structure.yaml', 'w') as f:
             yaml.dump(toc_structure, f, sort_keys=False)
         
-        logger.info(f"Found {len(toc_structure)} top-level sections")
-        logger.info("TOC structure saved to toc_structure.yaml")
+        logger.info(f"Found {len(toc_structure)} subsections")
+        logger.info("TOC structure saved to structure.yaml")
+        
         # Extract text using sections if TOC is available
         if toc_structure:
-            sections = get_section_pages(toc_structure)
-            logger.info(f"\nProcessing {len(sections)} sections...")
+            # Sort sections primarily by page, secondarily by level to handle same-page sections
+            sorted_sections = sorted(toc_structure.items(), key=lambda x: (x[1]['page'], x[1]['level']))
+            logger.info(f"\nProcessing {len(sorted_sections)} subsections...")
             
             with open(pdf_path, 'rb') as pdf_file:
                 pages = list(high_level.extract_pages(pdf_file))
                 
-                for i, section in enumerate(sections, 1):
-                    section_id = f"{i:03d}"  # Format with leading zeros, e.g. 001, 002, etc.
-                    section_title = section['title']
-                    # Create directory using section title
-                    section_dir = base_path / f"{section_id}_{section_title.lower()}"
+                for i, (section_id, section) in enumerate(sorted_sections):
+                    start_page = section['page']
+                    level = section['level']
+                    current_full_path = section['full_path']
+
+                    # --- Determine accurate end_page --- 
+                    end_page = None
+                    
+                    # 1. Look for the first direct child subsection's start page
+                    first_child_page = None
+                    for j in range(i + 1, len(sorted_sections)):
+                        next_sec_id, next_sec_data = sorted_sections[j]
+                        if next_sec_data['level'] == level + 1 and next_sec_data['full_path'][:-1] == current_full_path:
+                            first_child_page = next_sec_data['page']
+                            break # Found the first direct child
+
+                    # 2. Look for the start page of the next section at the same or higher level
+                    next_sibling_or_cousin_page = None
+                    for j in range(i + 1, len(sorted_sections)):
+                        next_sec_id, next_sec_data = sorted_sections[j]
+                        if next_sec_data['level'] <= level:
+                            next_sibling_or_cousin_page = next_sec_data['page']
+                            break # Found next section at same or higher level
+                            
+                    # Prioritize first child, then sibling/cousin
+                    if first_child_page is not None and (next_sibling_or_cousin_page is None or first_child_page <= next_sibling_or_cousin_page):
+                        end_page = first_child_page
+                    elif next_sibling_or_cousin_page is not None:
+                        end_page = next_sibling_or_cousin_page
+                    else:
+                        # 3. If it's the last section overall, use default offset
+                        end_page = start_page + 10
+
+                    # Ensure end_page is at least start_page (handles single-page sections)
+                    if end_page < start_page:
+                        end_page = start_page
+                    # --- End of end_page determination ---
+                    
+                    # Create sanitized section title and directory
+                    section_title = section['title'].lower().replace('/', '_').replace('\\', '_')
+                    section_dir = base_path / f"{section['id']}_{section_title}"
                     section_dir.mkdir(exist_ok=True)
                     
-                    # Extract text for this section
-                    text = extract_section_text(pages, section['start_page'], section['end_page'], config)
+                    # Extract text for this section using refined page range
+                    text = extract_section_text(pages, start_page, end_page, config)
                     
                     # Add any images from the section's pages
-                    for page_num in range(section['start_page'] - 1, section['end_page']):
+                    for page_num in range(start_page - 1, end_page):
                         key = f"page_{page_num}"
                         if key in image_locations:
                             for img_path in image_locations[key]:
@@ -269,8 +353,8 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
                     text = re.sub(r'\n{3,}', max_newlines, text)
                     text = '\n'.join(line.rstrip() for line in text.splitlines())
                     
-                    # Add section header with markdown formatting, section number and title
-                    text = f"# {i}. {section_title}\n\n{text}"
+                    # Add section header with markdown formatting and proper heading level
+                    text = f"{'#' * section['level']} {section['id']} {section['title']}\n\n{text}"
                     
                     # Add to full text
                     formatted_text.append(text)
@@ -284,11 +368,6 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
                         with open(chunk_path, 'w', encoding='utf-8') as f:
                             f.write(chunk)
                         logger.info(f"Written: {chunk_path}")
-                    
-                    # Process subsections recursively
-                    if section['subsections']:
-                        # TODO: Add recursive subsection processing if needed
-                        pass
         
         else:
             # Original processing without TOC
@@ -353,7 +432,7 @@ def pdf_to_markdown(pdf_path: str, output_path: str, config: dict) -> bool:
         return False
 
 def extract_pdf_toc(pdf_path: str) -> dict:
-    """Extract built-in TOC/bookmarks from PDF"""
+    """Extract built-in TOC/bookmarks from PDF and return flattened structure with deepest subsections"""
     doc = fitz.open(pdf_path)
     toc = doc.get_toc()
     
@@ -361,40 +440,41 @@ def extract_pdf_toc(pdf_path: str) -> dict:
     config = load_config()
     max_level = config['chunking'].get('toc_level', 6)
     
-    # Convert to dictionary structure
+    # Convert to flattened dictionary structure
     toc_structure = {}
-    current_sections = [None] * max_level  # Track up to max_level levels
+    current_path = []  # Track current path in TOC hierarchy
+    section_counters = [0] * max_level  # Track section numbers at each level
     
     for level, title, page in toc:
         # Skip if level is beyond max_level
         if level > max_level:
             continue
             
+        # Adjust current path based on level
+        if level <= len(current_path):
+            current_path = current_path[:level-1]
+        current_path.append(title)
+        
+        # Update section counters
+        section_counters[level-1] += 1
+        # Reset deeper levels
+        for i in range(level, max_level):
+            section_counters[i] = 0
+            
+        # Create section ID (e.g. "1.2.3")
+        section_id = '.'.join(str(num) for num in section_counters[:level] if num > 0)
+        
         # Create section entry
         section_entry = {
             'title': title,
             'page': page,
-            'level': level,  # Store level information
-            'subsections': {},
+            'level': level,
+            'id': section_id,
+            'full_path': current_path.copy()  # Store full path for reference
         }
         
-        # Update current section at this level
-        current_sections[level-1] = section_entry
-        
-        # Reset deeper levels
-        for i in range(level, len(current_sections)):
-            current_sections[i] = None
-        
-        # Add to structure
-        if level == 1:
-            # Use title as key for top level since we don't have section numbers
-            key = title.split()[0] if title else str(len(toc_structure) + 1)
-            toc_structure[key] = section_entry
-        else:
-            parent = current_sections[level - 2]
-            if parent:
-                key = title.split()[0] if title else str(len(parent['subsections']) + 1)
-                parent['subsections'][key] = section_entry
+        # Use section_id as key
+        toc_structure[section_id] = section_entry
 
     return toc_structure
 
